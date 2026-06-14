@@ -1,0 +1,48 @@
+name: Test config-path input
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_EVENT_NAME: workflow_dispatch
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up ESLint project with custom config
+        run: |
+          mkdir -p /tmp/eslint-config-project
+          cd /tmp/eslint-config-project
+          cat > package.json <<'EOF'
+          {
+            "name": "eslint-config-test-fixture",
+            "version": "1.0.0",
+            "type": "module"
+          }
+          EOF
+          npm install eslint@latest --save-dev --quiet
+          # Create a custom-named ESLint config file
+          cat > my-custom-eslint.config.js <<'EOF'
+          export default [];
+          EOF
+          # Create a simple JS file to lint
+          cat > index.js <<'EOF'
+          const x = 1;
+          export default x;
+          EOF
+
+      - id: action
+        uses: .
+        with:
+          github-token: ${{ github.token }}
+          directory: /tmp/eslint-config-project
+          targets: index.js
+          eslint-lib-path: ./node_modules/eslint/lib/api.js
+          config-path: ./my-custom-eslint.config.js
+          request-changes: false
+          fail-check: false
+
+      - name: Assert action completed with custom config
+        run: |
+          echo "Action completed with custom config-path without error"
+          echo "PASS"
