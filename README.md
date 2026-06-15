@@ -9,6 +9,7 @@ Hardened by [Chainguard](https://www.chainguard.dev) from the upstream action at
 | Version | Tag | Upstream commit |
 |---------|-----|-----------------|
 | v4.1.28 | [`v4.1.28`](https://github.com/chainguard-actions/CatChen-eslint-suggestion-action/tree/v4.1.28) | [`eab5038`](https://github.com/CatChen/eslint-suggestion-action/commit/eab5038cebf4c38182f97fb2287d3bec60cb416d) |
+| v4.1.29 | [`v4.1.29`](https://github.com/chainguard-actions/CatChen-eslint-suggestion-action/tree/v4.1.29) | [`be761aa`](https://github.com/CatChen/eslint-suggestion-action/commit/be761aaf3f3fcf699077f3643bb3c86cba533469) |
 
 ## Privacy
 
