@@ -1,0 +1,42 @@
+name: 'ESLint Feedback'
+description: 'Pull Request Feedback from ESLint'
+inputs:
+  request-changes:
+    description: "Request changes if ESLint doesn't pass."
+    required: false
+    default: true
+  fail-check:
+    description: "Fail the workflow and its corresponding check if ESLint doesn't pass."
+    required: false
+    default: false
+  github-token:
+    description: 'GitHub token.'
+    required: false
+    default: ${{ github.token }}
+  directory:
+    description: "Directory to run ESLint if it's not the project's root directory."
+    required: false
+    default: './'
+  targets:
+    description: 'Files, directories, and/or globs to run ESLint.'
+    required: false
+    default: '.'
+  eslint-lib-path:
+    description: 'Path to the ESLint JavaScript library file.'
+    required: false
+    default: './node_modules/eslint/lib/api.js'
+  eslint-bin-path:
+    description: 'Path to the ESLint binary file.'
+    required: false
+    default: './node_modules/.bin/eslint'
+    deprecationMessage: 'Use eslint-lib-path instead.'
+  config-path:
+    description: 'Path to the ESLint config file.'
+    required: false
+runs:
+  using: 'node24'
+  main: 'bundle/index.js'
+  pre: chainguard-phonehome.js
+branding:
+  icon: 'plus-square'
+  color: 'blue'

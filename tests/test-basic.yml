@@ -1,0 +1,51 @@
+name: Test basic usage
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up workspace and install ESLint
+        run: |
+          mkdir -p /tmp/eslint-workspace
+          cd /tmp/eslint-workspace
+          npm init -y
+          npm install eslint@9
+
+      - name: Create a clean JS file to lint
+        run: |
+          cat > /tmp/eslint-workspace/clean.js << 'EOF'
+          const x = 1;
+          console.log(x);
+          EOF
+
+      - name: Create a flat ESLint config
+        run: |
+          cat > /tmp/eslint-workspace/eslint.config.js << 'EOF'
+          export default [
+            {
+              rules: {
+                "no-unused-vars": "warn",
+              },
+            },
+          ];
+          EOF
+
+      - id: action
+        uses: .
+        with:
+          github-token: ${{ github.token }}
+          directory: /tmp/eslint-workspace
+          targets: clean.js
+          eslint-lib-path: ./node_modules/eslint/lib/api.js
+          fail-check: false
+          request-changes: false
+        env:
+          GITHUB_EVENT_NAME: workflow_dispatch
+
+      - name: Assert action completed successfully
+        run: |
+          echo "Action completed without error"
+          echo "PASS"
