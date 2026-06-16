@@ -1,0 +1,42 @@
+name: Test basic usage
+on:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_EVENT_NAME: push
+      GITHUB_REF: refs/heads/main
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up ESLint project in temp directory
+        run: |
+          mkdir -p /tmp/eslint-test-project/src
+          # Copy fixture files
+          cp "$GITHUB_WORKSPACE/actions/hardened/CatChen--eslint-suggestion-action/v4.1.27/tests/fixtures/eslint-project/package.json" /tmp/eslint-test-project/
+          cp "$GITHUB_WORKSPACE/actions/hardened/CatChen--eslint-suggestion-action/v4.1.27/tests/fixtures/eslint-project/eslint.config.js" /tmp/eslint-test-project/
+          cp "$GITHUB_WORKSPACE/actions/hardened/CatChen--eslint-suggestion-action/v4.1.27/tests/fixtures/eslint-project/src/index.js" /tmp/eslint-test-project/src/
+          # Install ESLint
+          cd /tmp/eslint-test-project
+          npm install --save-dev eslint@^9.0.0 @eslint/js@^9.0.0 2>&1
+          echo "ESLint installed successfully"
+          ls node_modules/.bin/eslint || echo "eslint binary not found"
+          ls node_modules/eslint/lib/api.js || echo "eslint api.js not found"
+
+      - name: Run ESLint suggestion action (basic)
+        id: action
+        uses: .
+        with:
+          github-token: ${{ github.token }}
+          directory: /tmp/eslint-test-project
+          targets: src/index.js
+          eslint-lib-path: ./node_modules/eslint/lib/api.js
+          request-changes: false
+          fail-check: false
+
+      - name: Assert action completed successfully
+        run: |
+          echo "Action completed without error"
+          echo "PASS"

@@ -1,0 +1,7 @@
+{
+  "name": "test-eslint-project",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Minimal ESLint project for testing",
+  "license": "MIT"
+}
