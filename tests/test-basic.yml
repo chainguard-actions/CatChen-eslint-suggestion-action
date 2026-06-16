@@ -1,0 +1,62 @@
+name: Test basic usage
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_EVENT_NAME: workflow_dispatch
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up ESLint project
+        run: |
+          mkdir -p /tmp/eslint-project/src
+          cd /tmp/eslint-project
+
+          # Create a minimal package.json
+          cat > package.json <<'EOF'
+          {
+            "name": "test-project",
+            "version": "1.0.0",
+            "type": "commonjs"
+          }
+          EOF
+
+          # Install ESLint 8 (which has loadESLint support)
+          npm install --save-dev eslint@8 2>&1 | tail -5
+
+          # Create a simple JS file that passes ESLint
+          cat > src/index.js <<'EOF'
+          const x = 1;
+          console.log(x);
+          EOF
+
+          # Create a flat config file (eslint.config.js for ESLint 8.57+)
+          cat > eslint.config.js <<'EOF'
+          module.exports = [
+            {
+              rules: {
+                "no-unused-vars": "warn"
+              }
+            }
+          ];
+          EOF
+
+          echo "ESLint project set up at /tmp/eslint-project"
+          ls -la /tmp/eslint-project/node_modules/.bin/eslint || echo "ESLint binary not found"
+          ls -la /tmp/eslint-project/node_modules/eslint/lib/api.js || echo "ESLint lib not found"
+
+      - id: action
+        uses: .
+        with:
+          directory: '/tmp/eslint-project'
+          targets: 'src'
+          eslint-lib-path: './node_modules/eslint/lib/api.js'
+          fail-check: 'false'
+          request-changes: 'false'
+
+      - name: Assert action completed successfully
+        run: |
+          echo "Action completed without failure"
+          echo "PASS"

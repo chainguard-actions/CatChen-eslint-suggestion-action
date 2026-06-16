@@ -1,0 +1,62 @@
+name: Test config-path input
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_EVENT_NAME: workflow_dispatch
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up ESLint project with custom config
+        run: |
+          mkdir -p /tmp/eslint-config-project/src
+          cd /tmp/eslint-config-project
+
+          # Create a minimal package.json
+          cat > package.json <<'EOF'
+          {
+            "name": "test-project",
+            "version": "1.0.0",
+            "type": "commonjs"
+          }
+          EOF
+
+          # Install ESLint 8
+          npm install --save-dev eslint@8 2>&1 | tail -5
+
+          # Create a simple JS file that passes ESLint
+          cat > src/index.js <<'EOF'
+          const x = 1;
+          console.log(x);
+          EOF
+
+          # Create a custom-named ESLint config file (not the default name)
+          cat > my-custom-eslint.config.js <<'EOF'
+          module.exports = [
+            {
+              rules: {
+                "no-unused-vars": "warn"
+              }
+            }
+          ];
+          EOF
+
+          echo "ESLint project with custom config set up at /tmp/eslint-config-project"
+          ls -la /tmp/eslint-config-project/node_modules/eslint/lib/api.js || echo "ESLint lib not found"
+
+      - id: action
+        uses: .
+        with:
+          directory: '/tmp/eslint-config-project'
+          targets: 'src'
+          eslint-lib-path: './node_modules/eslint/lib/api.js'
+          config-path: './my-custom-eslint.config.js'
+          fail-check: 'false'
+          request-changes: 'false'
+
+      - name: Assert action completed with config-path
+        run: |
+          echo "Action completed with custom config-path without failure"
+          echo "PASS"
