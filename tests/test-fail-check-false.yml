@@ -1,0 +1,53 @@
+name: Test fail-check false with ESLint errors
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_EVENT_NAME: workflow_dispatch
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up test project with ESLint
+        run: |
+          mkdir -p /tmp/eslint-errors-project
+          cd /tmp/eslint-errors-project
+          cat > package.json << 'EOF'
+          {
+            "name": "test-project",
+            "version": "1.0.0",
+            "private": true
+          }
+          EOF
+          npm install --save-dev eslint@9 2>&1 | tail -5
+          # Create a flat config file for ESLint 9
+          cat > eslint.config.js << 'EOF'
+          export default [
+            {
+              rules: {
+                "no-unused-vars": "error"
+              }
+            }
+          ];
+          EOF
+          # Create a JS file with an ESLint error (unused variable)
+          cat > bad.js << 'EOF'
+          const unusedVar = 42;
+          EOF
+
+      - name: Run ESLint action with errors but fail-check false
+        id: action
+        uses: .
+        with:
+          request-changes: 'false'
+          fail-check: 'false'
+          github-token: 'fake-token-for-non-pr-event'
+          directory: '/tmp/eslint-errors-project'
+          targets: 'bad.js'
+          eslint-lib-path: './node_modules/eslint/lib/api.js'
+
+      - name: Assert action completed without failing
+        run: |
+          echo "Action completed successfully with fail-check=false even with ESLint errors"
+          echo "PASS"

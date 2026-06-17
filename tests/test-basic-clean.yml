@@ -1,0 +1,55 @@
+name: Test basic clean code
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_EVENT_NAME: workflow_dispatch
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up Node.js
+        run: |
+          node --version
+          npm --version
+
+      - name: Create test project with ESLint
+        run: |
+          mkdir -p /tmp/eslint-test-project
+          cd /tmp/eslint-test-project
+          cat > package.json << 'EOF'
+          {
+            "name": "test-project",
+            "version": "1.0.0",
+            "private": true
+          }
+          EOF
+          npm install --save-dev eslint@9 2>&1 | tail -5
+          # Create a flat config file for ESLint 9
+          cat > eslint.config.js << 'EOF'
+          export default [
+            {
+              rules: {
+                "no-unused-vars": "error",
+                "no-undef": "error"
+              }
+            }
+          ];
+          EOF
+          # Create a clean JS file with no ESLint errors
+          cat > clean.js << 'EOF'
+          const x = 1;
+          console.log(x);
+          EOF
+
+      - name: Run ESLint action on clean code
+        id: action
+        uses: .
+        with:
+          request-changes: 'false'
+          fail-check: 'false'
+          github-token: 'fake-token-for-non-pr-event'
+          directory: '/tmp/eslint-test-project'
+          targets: 'clean.js'
+          eslint-lib-path: './node_modules/eslint/lib/api.js'

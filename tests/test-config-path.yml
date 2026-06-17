@@ -1,0 +1,57 @@
+name: Test custom config-path input
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_EVENT_NAME: workflow_dispatch
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up test project with ESLint and custom config path
+        run: |
+          mkdir -p /tmp/config-path-project
+          cd /tmp/config-path-project
+          cat > package.json << 'EOF'
+          {
+            "name": "test-project",
+            "version": "1.0.0",
+            "private": true
+          }
+          EOF
+          npm install --save-dev eslint@9 2>&1 | tail -5
+          # Create the config file at a non-default path
+          mkdir -p custom-configs
+          cat > custom-configs/my-eslint.config.js << 'EOF'
+          export default [
+            {
+              rules: {
+                "no-unused-vars": "error",
+                "no-undef": "error"
+              }
+            }
+          ];
+          EOF
+          # Create a clean JS file with no ESLint errors
+          cat > clean.js << 'EOF'
+          const x = 42;
+          console.log(x);
+          EOF
+
+      - name: Run ESLint action with custom config-path
+        id: action
+        uses: .
+        with:
+          request-changes: 'false'
+          fail-check: 'false'
+          github-token: 'fake-token-for-non-pr-event'
+          directory: '/tmp/config-path-project'
+          targets: 'clean.js'
+          eslint-lib-path: './node_modules/eslint/lib/api.js'
+          config-path: './custom-configs/my-eslint.config.js'
+
+      - name: Assert action completed with custom config-path
+        run: |
+          echo "Action completed successfully with custom config-path"
+          echo "PASS"
