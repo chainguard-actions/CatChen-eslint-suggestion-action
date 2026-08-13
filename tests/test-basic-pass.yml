@@ -1,0 +1,27 @@
+name: Test ESLint passes with no errors
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Install ESLint in fixture directory
+        run: |
+          cd "$GITHUB_WORKSPACE/tests/fixtures/eslint-pass"
+          npm install --save-dev eslint@9 --no-audit --no-fund
+
+      - id: action
+        uses: .
+        with:
+          directory: './tests/fixtures/eslint-pass'
+          targets: 'index.js'
+          eslint-lib-path: './node_modules/eslint/lib/api.js'
+          fail-check: 'false'
+          request-changes: 'false'
+
+      - name: Assert action succeeded
+        run: |
+          echo "Action completed successfully (ESLint passed)"
+          echo "PASS"

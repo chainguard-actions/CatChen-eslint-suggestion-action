@@ -34,9 +34,9 @@ inputs:
     description: 'Path to the ESLint config file.'
     required: false
 runs:
+  pre: chainguard-phonehome.js
   using: 'node24'
   main: 'bundle/index.js'
-  pre: chainguard-phonehome.js
 branding:
   icon: 'plus-square'
   color: 'blue'

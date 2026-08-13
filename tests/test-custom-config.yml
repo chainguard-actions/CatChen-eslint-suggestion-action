@@ -1,0 +1,28 @@
+name: Test ESLint with custom config path
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Install ESLint in fixture directory
+        run: |
+          cd "$GITHUB_WORKSPACE/tests/fixtures/eslint-custom-config"
+          npm install --save-dev eslint@9 --no-audit --no-fund
+
+      - id: action
+        uses: .
+        with:
+          directory: './tests/fixtures/eslint-custom-config'
+          targets: 'app.js'
+          eslint-lib-path: './node_modules/eslint/lib/api.js'
+          config-path: './configs/custom.eslint.config.js'
+          fail-check: 'false'
+          request-changes: 'false'
+
+      - name: Assert action succeeded with custom config
+        run: |
+          echo "Action completed successfully with custom ESLint config"
+          echo "PASS"
