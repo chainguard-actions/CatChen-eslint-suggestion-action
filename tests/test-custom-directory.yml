@@ -1,0 +1,60 @@
+name: Test custom directory input
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up ESLint fixture in a custom directory
+        run: |
+          mkdir -p /tmp/custom-dir-fixture
+          cd /tmp/custom-dir-fixture
+
+          # Create a minimal package.json
+          cat > package.json <<'PKGJSON'
+          {
+            "name": "custom-dir-fixture",
+            "version": "1.0.0",
+            "type": "commonjs"
+          }
+          PKGJSON
+
+          # Install ESLint 8
+          npm install --save-dev eslint@8 2>&1 | tail -5
+
+          # Create a clean JS file to lint
+          cat > index.js <<'JSEOF'
+          var greeting = "hello";
+          console.log(greeting);
+          JSEOF
+
+          # Create ESLint config
+          cat > .eslintrc.json <<'ESLINTEOF'
+          {
+            "env": { "node": true },
+            "rules": {
+              "no-undef": "error"
+            }
+          }
+          ESLINTEOF
+
+          echo "Custom directory fixture ready:"
+          ls -la /tmp/custom-dir-fixture/
+          ls /tmp/custom-dir-fixture/node_modules/eslint/lib/api.js && echo "eslint api.js found" || echo "eslint api.js not found"
+
+      - name: Run ESLint action with custom directory input
+        id: action
+        uses: .
+        with:
+          directory: /tmp/custom-dir-fixture
+          targets: index.js
+          eslint-lib-path: ./node_modules/eslint/lib/api.js
+          config-path: ./.eslintrc.json
+          fail-check: false
+          request-changes: false
+
+      - name: Assert action completed successfully with custom directory
+        run: |
+          echo "Action completed with custom directory - PASS"

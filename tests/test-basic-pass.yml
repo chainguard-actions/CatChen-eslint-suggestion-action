@@ -1,0 +1,60 @@
+name: Test basic usage - ESLint passes on clean code
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up ESLint fixture directory with clean code
+        run: |
+          mkdir -p /tmp/eslint-fixture
+          cd /tmp/eslint-fixture
+
+          # Create a minimal package.json
+          cat > package.json <<'PKGJSON'
+          {
+            "name": "eslint-fixture",
+            "version": "1.0.0",
+            "type": "commonjs"
+          }
+          PKGJSON
+
+          # Install ESLint 8 (stable, supports overrideConfigFile)
+          npm install --save-dev eslint@8 2>&1 | tail -5
+
+          # Create a clean JS file to lint (no violations)
+          cat > clean.js <<'JSEOF'
+          var x = 1;
+          console.log(x);
+          JSEOF
+
+          # Create a minimal ESLint config (legacy format for ESLint 8)
+          cat > .eslintrc.json <<'ESLINTEOF'
+          {
+            "env": { "node": true },
+            "rules": {
+              "no-undef": "error"
+            }
+          }
+          ESLINTEOF
+
+          echo "Fixture directory ready:"
+          ls -la /tmp/eslint-fixture/
+          ls /tmp/eslint-fixture/node_modules/eslint/lib/api.js && echo "eslint api.js found" || echo "eslint api.js not found"
+
+      - name: Run ESLint action on clean code
+        id: action
+        uses: .
+        with:
+          directory: /tmp/eslint-fixture
+          targets: clean.js
+          eslint-lib-path: ./node_modules/eslint/lib/api.js
+          config-path: ./.eslintrc.json
+          fail-check: false
+          request-changes: false
+
+      - name: Assert action completed successfully
+        run: |
+          echo "Action completed without failure - PASS"

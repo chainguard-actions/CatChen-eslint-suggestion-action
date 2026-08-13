@@ -1,42 +1,60 @@
-name: Test config-path input
+name: Test config-path input - custom ESLint config file
 on:
   workflow_dispatch:
-
 jobs:
   test:
     runs-on: ubuntu-latest
-    env:
-      GITHUB_EVENT_NAME: push
-      GITHUB_REF: refs/heads/main
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
-      - name: Set up ESLint project with custom config in temp directory
+      - name: Set up ESLint fixture with custom config path
         run: |
-          mkdir -p /tmp/eslint-config-test/src
-          # Copy fixture files
-          cp "$GITHUB_WORKSPACE/actions/hardened/CatChen--eslint-suggestion-action/v4.1.27/tests/fixtures/eslint-project/package.json" /tmp/eslint-config-test/
-          cp "$GITHUB_WORKSPACE/actions/hardened/CatChen--eslint-suggestion-action/v4.1.27/tests/fixtures/eslint-project/custom.eslint.config.js" /tmp/eslint-config-test/
-          cp "$GITHUB_WORKSPACE/actions/hardened/CatChen--eslint-suggestion-action/v4.1.27/tests/fixtures/eslint-project/src/index.js" /tmp/eslint-config-test/src/
-          # Install ESLint
-          cd /tmp/eslint-config-test
-          npm install --save-dev eslint@^9.0.0 @eslint/js@^9.0.0 2>&1
-          echo "ESLint installed successfully"
-          ls node_modules/eslint/lib/api.js || echo "eslint api.js not found"
+          mkdir -p /tmp/config-path-fixture/configs
+          cd /tmp/config-path-fixture
 
-      - name: Run ESLint suggestion action with custom config-path
+          # Create a minimal package.json
+          cat > package.json <<'PKGJSON'
+          {
+            "name": "config-path-fixture",
+            "version": "1.0.0",
+            "type": "commonjs"
+          }
+          PKGJSON
+
+          # Install ESLint 8
+          npm install --save-dev eslint@8 2>&1 | tail -5
+
+          # Create a clean JS file to lint
+          cat > app.js <<'JSEOF'
+          var value = 42;
+          console.log(value);
+          JSEOF
+
+          # Create a custom ESLint config at a non-default path
+          cat > configs/custom.eslintrc.json <<'ESLINTEOF'
+          {
+            "env": { "node": true },
+            "rules": {
+              "no-undef": "error"
+            }
+          }
+          ESLINTEOF
+
+          echo "Config-path fixture ready:"
+          ls -la /tmp/config-path-fixture/
+          ls -la /tmp/config-path-fixture/configs/
+
+      - name: Run ESLint action with custom config-path
         id: action
         uses: .
         with:
-          github-token: ${{ github.token }}
-          directory: /tmp/eslint-config-test
-          targets: src/index.js
+          directory: /tmp/config-path-fixture
+          targets: app.js
           eslint-lib-path: ./node_modules/eslint/lib/api.js
-          config-path: ./custom.eslint.config.js
-          request-changes: false
+          config-path: ./configs/custom.eslintrc.json
           fail-check: false
+          request-changes: false
 
-      - name: Assert action completed successfully with custom config
+      - name: Assert action completed successfully with custom config path
         run: |
-          echo "Action completed with custom config-path without error"
-          echo "PASS"
+          echo "Action completed with custom config-path - PASS"

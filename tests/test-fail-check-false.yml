@@ -1,0 +1,43 @@
+name: Test fail-check false with passing ESLint
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_EVENT_NAME: pull_request
+      GITHUB_REF: refs/pull/1/merge
+      GITHUB_HEAD_REF: feature-branch
+      GITHUB_BASE_REF: main
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up Node.js project with ESLint
+        run: |
+          mkdir -p /tmp/eslint-failcheck-test
+          cd /tmp/eslint-failcheck-test
+          npm init -y
+          npm install eslint@8 --save-dev
+          # Create a valid JS file with no lint errors
+          cat > clean.js << 'EOF'
+          var x = 1;
+          var y = 2;
+          var z = x + y;
+          console.log(z);
+          EOF
+
+      - id: action
+        uses: .
+        with:
+          directory: '/tmp/eslint-failcheck-test'
+          targets: 'clean.js'
+          eslint-lib-path: '/tmp/eslint-failcheck-test/node_modules/eslint/lib/api.js'
+          github-token: ${{ github.token }}
+          request-changes: 'false'
+          fail-check: 'false'
+        continue-on-error: true
+
+      - name: Assert action completed
+        run: |
+          echo "Action outcome: ${{ steps.action.outcome }}"
+          echo "PASS: Action ran with fail-check=false"

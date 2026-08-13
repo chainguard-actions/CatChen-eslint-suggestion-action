@@ -1,0 +1,70 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main, '[0-9]+-[0-9]+-*']
+  workflow_run:
+    workflows: ['Dependabot']
+    branches: ['dependabot/**/*']
+    types:
+      - completed
+  workflow_dispatch:
+  workflow_call:
+
+jobs:
+  build:
+    name: Build
+    if: ${{ !startsWith(github.head_ref || github.event.workflow_run.head_branch, 'workflows/tests/') }}
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      contents: write
+    steps:
+      - uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3
+        id: get-github-app-token
+        if: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
+        with:
+          app-id: ${{ secrets.CHECK_GIT_STATUS_BOT_APP_ID }}
+          private-key: ${{ secrets.CHECK_GIT_STATUS_BOT_APP_PRIVATE_KEY }}
+
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        with:
+          repository: ${{ github.event.pull_request.head.repo.full_name || github.repository }}
+          ref: ${{ github.head_ref }}
+          token: ${{ steps.get-github-app-token.outputs.token || github.token }}
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version-file: '.nvmrc'
+          check-latest: true
+          cache: yarn
+
+      - name: Install dependencies
+        run: yarn install --immutable
+
+      - name: Codegen
+        run: yarn codegen
+
+      - name: Reformat
+        run: |
+          yarn prettier --write .
+          yarn lint --fix || true # Ignore errors and leave them to the ESLint workflow
+
+      - name: Build
+        run: yarn build
+
+      - name: Bundle
+        run: yarn bundle
+
+      - uses: CatChen/check-git-status-action@cc5a79733c441f67cd0cd076de116cd2eebcebfe # v2
+        id: check-git-status
+        with:
+          fail-if-not-clean: ${{ github.actor != 'dependabot[bot]' || github.actor_id != 49699333 }}
+          push-if-not-clean: true
+          request-changes-if-not-clean: false
+          push-token: ${{ steps.get-github-app-token.outputs.token || github.token }}
