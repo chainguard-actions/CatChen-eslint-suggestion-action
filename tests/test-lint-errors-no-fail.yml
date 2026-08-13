@@ -1,0 +1,61 @@
+name: Test ESLint errors reported without failing workflow
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_EVENT_NAME: workflow_dispatch
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up Node.js project with ESLint and a file with errors
+        run: |
+          mkdir -p /tmp/eslint-errors-test
+          cd /tmp/eslint-errors-test
+          cat > package.json << 'EOF'
+          {
+            "name": "test-project",
+            "version": "1.0.0",
+            "type": "module"
+          }
+          EOF
+          npm install --save-dev eslint@9 2>&1 | tail -5
+          # Create a JS file with an unused variable (ESLint error)
+          cat > bad.js << 'EOF'
+          var unusedVar = "this is unused";
+          console.log("hello");
+          EOF
+          # Create a flat config that enforces no-unused-vars as error
+          cat > eslint.config.js << 'EOF'
+          import js from "@eslint/js";
+          export default [
+            js.configs.recommended,
+            {
+              rules: {
+                "no-unused-vars": "error"
+              }
+            }
+          ];
+          EOF
+
+      - id: action
+        uses: .
+        with:
+          directory: /tmp/eslint-errors-test
+          targets: bad.js
+          eslint-lib-path: ./node_modules/eslint/lib/api.js
+          fail-check: false
+          request-changes: false
+          github-token: fake-token-for-local-test
+
+      - name: Assert action succeeded despite ESLint errors (fail-check is false)
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          if [ "$OUTCOME" != "success" ]; then
+            echo "FAIL: expected action to succeed when fail-check=false even with ESLint errors, got outcome=$OUTCOME"
+            exit 1
+          fi
+          echo "PASS: action correctly completed without failing when fail-check=false"

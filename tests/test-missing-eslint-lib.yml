@@ -1,0 +1,46 @@
+name: Test error when ESLint lib path is missing
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_EVENT_NAME: workflow_dispatch
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up minimal project directory
+        run: |
+          mkdir -p /tmp/eslint-missing-lib-test
+          cd /tmp/eslint-missing-lib-test
+          cat > package.json << 'EOF'
+          {
+            "name": "test-project",
+            "version": "1.0.0"
+          }
+          EOF
+          cat > index.js << 'EOF'
+          console.log("hello");
+          EOF
+
+      - id: action
+        uses: .
+        with:
+          directory: /tmp/eslint-missing-lib-test
+          targets: index.js
+          eslint-lib-path: ./node_modules/eslint/lib/api.js
+          fail-check: false
+          request-changes: false
+          github-token: fake-token-for-local-test
+        continue-on-error: true
+
+      - name: Assert action failed due to missing ESLint lib
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          if [ "$OUTCOME" != "failure" ]; then
+            echo "FAIL: expected action to fail when ESLint lib is missing, got outcome=$OUTCOME"
+            exit 1
+          fi
+          echo "PASS: action correctly failed when ESLint lib path does not exist"

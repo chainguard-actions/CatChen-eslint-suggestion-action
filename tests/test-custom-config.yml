@@ -1,0 +1,47 @@
+name: Test custom ESLint config path
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up ESLint project with custom config
+        run: |
+          mkdir -p /tmp/eslint-custom-config-project
+          cd /tmp/eslint-custom-config-project
+          # Use type:module so ESM flat config works
+          echo '{"name":"test","version":"1.0.0","type":"module"}' > package.json
+          npm install eslint@9 --save-dev
+          # Create a custom config file at a non-default path (ESM)
+          printf '%s\n' \
+            'import js from "@eslint/js";' \
+            'export default [' \
+            '  js.configs.recommended,' \
+            '  {' \
+            '    languageOptions: {' \
+            '      globals: { console: "readonly", process: "readonly" }' \
+            '    },' \
+            '    rules: { "no-console": "off" }' \
+            '  }' \
+            '];' > custom-eslint.config.js
+          # Create clean JS file
+          printf '%s\n' \
+            'const value = 42;' \
+            'console.log(value);' > app.js
+
+      - id: action
+        uses: .
+        with:
+          directory: '/tmp/eslint-custom-config-project'
+          targets: 'app.js'
+          eslint-lib-path: './node_modules/eslint/lib/api.js'
+          config-path: './custom-eslint.config.js'
+          fail-check: 'false'
+          request-changes: 'false'
+
+      - name: Assert action succeeded with custom config
+        run: |
+          echo "Action completed successfully with custom config path"
+          echo "PASS"

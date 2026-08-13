@@ -1,0 +1,52 @@
+name: Test ESLint errors with fail-check enabled
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up ESLint project with code that has errors
+        run: |
+          mkdir -p /tmp/eslint-fail-project
+          cd /tmp/eslint-fail-project
+          # Use type:module so ESM flat config works
+          echo '{"name":"test","version":"1.0.0","type":"module"}' > package.json
+          npm install eslint@9 --save-dev
+          # Create a flat config file (ESM) with node globals
+          printf '%s\n' \
+            'import js from "@eslint/js";' \
+            'export default [' \
+            '  js.configs.recommended,' \
+            '  {' \
+            '    languageOptions: {' \
+            '      globals: { console: "readonly", process: "readonly" }' \
+            '    }' \
+            '  }' \
+            '];' > eslint.config.js
+          # Create JS file with ESLint errors (no-undef: using undeclared variable)
+          printf '%s\n' \
+            'var x = undeclaredVariable;' \
+            'console.log(x);' > bad.js
+
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          directory: '/tmp/eslint-fail-project'
+          targets: 'bad.js'
+          eslint-lib-path: './node_modules/eslint/lib/api.js'
+          fail-check: 'true'
+          request-changes: 'false'
+
+      - name: Assert action failed as expected
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "action outcome: $OUTCOME"
+          if [ "$OUTCOME" != "failure" ]; then
+            echo "FAIL: expected action to fail when ESLint finds errors and fail-check=true, but outcome was '$OUTCOME'"
+            exit 1
+          fi
+          echo "PASS: action correctly failed when ESLint found errors with fail-check=true"
