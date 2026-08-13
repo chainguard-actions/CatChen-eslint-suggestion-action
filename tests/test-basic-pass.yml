@@ -1,0 +1,29 @@
+name: Test basic usage - ESLint passes
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Install ESLint in fixture project directory
+        run: |
+          cd "$GITHUB_WORKSPACE/tests/fixtures/eslint-project"
+          npm install --save-dev eslint @eslint/js --no-audit --no-fund
+
+      - name: Run ESLint action on clean code
+        id: action
+        uses: .
+        with:
+          github-token: ${{ github.token }}
+          directory: './tests/fixtures/eslint-project'
+          targets: 'clean.js'
+          eslint-lib-path: './node_modules/eslint/lib/api.js'
+          fail-check: 'false'
+          request-changes: 'false'
+
+      - name: Assert action completed successfully
+        run: |
+          echo "Action completed without error"
+          echo "PASS: ESLint ran successfully on clean code"

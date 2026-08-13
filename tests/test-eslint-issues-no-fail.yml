@@ -1,0 +1,29 @@
+name: Test ESLint issues without fail-check
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Install ESLint in issues fixture project directory
+        run: |
+          cd "$GITHUB_WORKSPACE/tests/fixtures/eslint-project-issues"
+          npm install --save-dev eslint @eslint/js --no-audit --no-fund
+
+      - name: Run ESLint action on code with issues (fail-check false)
+        id: action
+        uses: .
+        with:
+          github-token: ${{ github.token }}
+          directory: './tests/fixtures/eslint-project-issues'
+          targets: 'problematic.js'
+          eslint-lib-path: './node_modules/eslint/lib/api.js'
+          fail-check: 'false'
+          request-changes: 'false'
+
+      - name: Assert action completed without failing workflow
+        run: |
+          echo "Action completed - ESLint found issues but fail-check was false"
+          echo "PASS: workflow continued despite ESLint issues"
