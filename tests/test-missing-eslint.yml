@@ -1,0 +1,45 @@
+name: Test missing ESLint - action fails when ESLint lib not found
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up empty project directory (no ESLint installed)
+        run: |
+          set -e
+          PROJ="$GITHUB_WORKSPACE/eslint-missing-project"
+          mkdir -p "$PROJ"
+          cd "$PROJ"
+          cat > package.json << 'EOF'
+          {
+            "name": "test-project",
+            "version": "1.0.0"
+          }
+          EOF
+          echo "Empty project set up (no ESLint installed)"
+          ls "$PROJ/node_modules/eslint/lib/api.js" 2>/dev/null && echo "UNEXPECTED: ESLint found" || echo "Confirmed: ESLint not installed"
+
+      - name: Run ESLint feedback action with missing ESLint lib
+        id: action
+        uses: .
+        with:
+          directory: '${{ github.workspace }}/eslint-missing-project'
+          targets: '.'
+          eslint-lib-path: './node_modules/eslint/lib/api.js'
+          fail-check: 'false'
+          request-changes: 'false'
+        continue-on-error: true
+
+      - name: Assert action failed due to missing ESLint
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "action outcome: $OUTCOME"
+          if [ "$OUTCOME" != "failure" ]; then
+            echo "FAIL: expected action to fail when ESLint lib is missing, but outcome was: $OUTCOME"
+            exit 1
+          fi
+          echo "PASS: action correctly failed when ESLint lib was not found"

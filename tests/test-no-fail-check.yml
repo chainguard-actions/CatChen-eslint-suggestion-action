@@ -1,0 +1,67 @@
+name: Test no-fail-check - ESLint errors do not fail workflow
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up ESLint project with errors
+        run: |
+          set -e
+          PROJ="$GITHUB_WORKSPACE/eslint-nofail-project"
+          mkdir -p "$PROJ"
+          cd "$PROJ"
+
+          # Create a minimal package.json with ESM type
+          cat > package.json << 'EOF'
+          {
+            "name": "test-project",
+            "version": "1.0.0",
+            "type": "module"
+          }
+          EOF
+
+          # Install ESLint 10
+          npm install eslint@^10.0.0 --save-dev --quiet 2>&1 | tail -5
+
+          # Create a flat ESLint config that flags no-undef as error
+          cat > eslint.config.js << 'EOF'
+          export default [
+            {
+              rules: {
+                "no-undef": "error"
+              }
+            }
+          ];
+          EOF
+
+          # Create a JS file with lint errors (uses undefined variable)
+          cat > bad.js << 'EOF'
+          console.log(undefinedVariable);
+          EOF
+
+          echo "ESLint project with errors set up at $PROJ"
+
+      - name: Run ESLint feedback action on code with errors (fail-check=false)
+        id: action
+        uses: .
+        with:
+          directory: '${{ github.workspace }}/eslint-nofail-project'
+          targets: 'bad.js'
+          eslint-lib-path: './node_modules/eslint/lib/api.js'
+          fail-check: 'false'
+          request-changes: 'false'
+        continue-on-error: true
+
+      - name: Assert action succeeded despite ESLint errors
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "action outcome: $OUTCOME"
+          if [ "$OUTCOME" != "success" ]; then
+            echo "FAIL: expected action to succeed when fail-check=false, but outcome was: $OUTCOME"
+            exit 1
+          fi
+          echo "PASS: action correctly succeeded when fail-check=false even with ESLint errors"

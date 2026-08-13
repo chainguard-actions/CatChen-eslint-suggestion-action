@@ -1,0 +1,61 @@
+name: Test basic pass - clean code
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up ESLint project in workspace subdirectory
+        run: |
+          set -e
+          PROJ="$GITHUB_WORKSPACE/eslint-basic-project"
+          mkdir -p "$PROJ"
+          cd "$PROJ"
+
+          # Create a minimal package.json with ESM type
+          cat > package.json << 'EOF'
+          {
+            "name": "test-project",
+            "version": "1.0.0",
+            "type": "module"
+          }
+          EOF
+
+          # Install ESLint 10 (no extra plugins needed)
+          npm install eslint@^10.0.0 --save-dev --quiet 2>&1 | tail -5
+
+          # Create a minimal flat ESLint config (no @eslint/js import needed)
+          cat > eslint.config.js << 'EOF'
+          export default [
+            {
+              rules: {}
+            }
+          ];
+          EOF
+
+          # Create a clean JS file (no lint errors)
+          cat > clean.js << 'EOF'
+          var greeting = "hello";
+          console.log(greeting);
+          EOF
+
+          echo "ESLint project set up at $PROJ"
+          ls "$PROJ/node_modules/.bin/eslint" && echo "ESLint binary found" || echo "ESLint binary not found"
+          ls "$PROJ/node_modules/eslint/lib/api.js" && echo "ESLint lib found" || echo "ESLint lib not found"
+
+      - name: Run ESLint feedback action on clean code
+        id: action
+        uses: .
+        with:
+          directory: '${{ github.workspace }}/eslint-basic-project'
+          targets: 'clean.js'
+          eslint-lib-path: './node_modules/eslint/lib/api.js'
+          fail-check: 'false'
+          request-changes: 'false'
+
+      - name: Assert action completed successfully
+        run: |
+          echo "Action completed without failure - PASS"
+          echo "PASS: ESLint ran successfully on clean code"

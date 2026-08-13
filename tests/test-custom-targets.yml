@@ -1,0 +1,68 @@
+name: Test custom targets - lint specific file pattern
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_EVENT_NAME: workflow_dispatch
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Create test project with multiple JS files
+        run: |
+          mkdir -p /tmp/eslint-test-targets/src
+          cd /tmp/eslint-test-targets
+
+          # Minimal package.json (CJS)
+          cat > package.json << 'PKGJSON'
+          {
+            "name": "test-project-targets",
+            "version": "1.0.0",
+            "type": "commonjs"
+          }
+          PKGJSON
+
+          # Install ESLint 9 and @eslint/js
+          npm install --save-dev eslint @eslint/js 2>&1 | tail -5
+
+          # Flat config (CJS)
+          cat > eslint.config.js << 'ESLINTCFG'
+          const js = require("@eslint/js");
+          module.exports = [
+            js.configs.recommended
+          ];
+          ESLINTCFG
+
+          # Clean JS files in src/
+          cat > src/utils.js << 'JSFILE'
+          'use strict';
+          function multiply(a, b) {
+            return a * b;
+          }
+          module.exports = { multiply };
+          JSFILE
+
+          cat > src/helpers.js << 'JSFILE'
+          'use strict';
+          function subtract(a, b) {
+            return a - b;
+          }
+          module.exports = { subtract };
+          JSFILE
+
+      - name: Run ESLint action targeting src directory
+        id: action
+        uses: .
+        with:
+          directory: '/tmp/eslint-test-targets'
+          targets: 'src'
+          eslint-lib-path: './node_modules/eslint/lib/api.js'
+          fail-check: 'false'
+          request-changes: 'false'
+          github-token: 'fake-token-for-non-pr-event'
+
+      - name: Assert action completed successfully for custom targets
+        run: |
+          echo "Action completed without error - ESLint passed on src/ directory"
+          echo "PASS"

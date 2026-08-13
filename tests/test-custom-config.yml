@@ -1,0 +1,68 @@
+name: Test custom config path
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up ESLint project with custom config
+        run: |
+          set -e
+          PROJ="$GITHUB_WORKSPACE/eslint-custom-config-project"
+          mkdir -p "$PROJ"
+          cd "$PROJ"
+
+          # Create a minimal package.json with ESM type
+          cat > package.json << 'EOF'
+          {
+            "name": "test-project",
+            "version": "1.0.0",
+            "type": "module"
+          }
+          EOF
+
+          # Install ESLint 10
+          npm install eslint@^10.0.0 --save-dev --quiet 2>&1 | tail -5
+
+          # Create a custom ESLint flat config at a non-default path
+          mkdir -p configs
+          cat > configs/my-eslint.config.js << 'EOF'
+          export default [
+            {
+              rules: {}
+            }
+          ];
+          EOF
+
+          # Create a clean JS file
+          cat > app.js << 'EOF'
+          var value = 42;
+          console.log(value);
+          EOF
+
+          echo "ESLint project with custom config set up at $PROJ"
+
+      - name: Run ESLint feedback action with custom config path
+        id: action
+        uses: .
+        with:
+          directory: '${{ github.workspace }}/eslint-custom-config-project'
+          targets: 'app.js'
+          eslint-lib-path: './node_modules/eslint/lib/api.js'
+          config-path: './configs/my-eslint.config.js'
+          fail-check: 'false'
+          request-changes: 'false'
+        continue-on-error: true
+
+      - name: Assert action completed successfully with custom config
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "action outcome: $OUTCOME"
+          if [ "$OUTCOME" != "success" ]; then
+            echo "FAIL: expected action to succeed with custom config path, but outcome was: $OUTCOME"
+            exit 1
+          fi
+          echo "PASS: action correctly used custom ESLint config path"
