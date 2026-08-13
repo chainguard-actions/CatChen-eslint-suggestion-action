@@ -1,0 +1,63 @@
+name: Test ESLint clean pass
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_EVENT_NAME: workflow_dispatch
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up ESLint project
+        run: |
+          mkdir -p /tmp/eslint-project
+          cd /tmp/eslint-project
+          cat > package.json << 'EOF'
+          {
+            "name": "test-project",
+            "version": "1.0.0",
+            "type": "module"
+          }
+          EOF
+          npm install --save-dev eslint@9 2>&1 | tail -5
+
+      - name: Create clean JS file
+        run: |
+          cat > /tmp/eslint-project/clean.js << 'EOF'
+          const x = 1;
+          console.log(x);
+          EOF
+
+      - name: Create ESLint flat config
+        run: |
+          cat > /tmp/eslint-project/eslint.config.js << 'EOF'
+          export default [
+            {
+              rules: {
+                "no-unused-vars": "error"
+              }
+            }
+          ];
+          EOF
+
+      - id: action
+        uses: .
+        with:
+          directory: /tmp/eslint-project
+          targets: clean.js
+          eslint-lib-path: ./node_modules/eslint/lib/api.js
+          fail-check: 'false'
+          request-changes: 'false'
+        continue-on-error: true
+
+      - name: Assert action succeeded
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          if [ "$OUTCOME" != "success" ]; then
+            echo "FAIL: expected action to succeed on clean code, got outcome=$OUTCOME"
+            exit 1
+          fi
+          echo "PASS"

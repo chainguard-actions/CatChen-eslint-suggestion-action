@@ -1,0 +1,45 @@
+name: ESLint
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main, '[0-9]+-[0-9]+-*']
+  workflow_run:
+    workflows: ['Dependabot']
+    branches: ['dependabot/**/*']
+    types:
+      - completed
+  workflow_dispatch:
+  workflow_call:
+
+jobs:
+  eslint:
+    name: ESLint
+    if: ${{ !startsWith(github.head_ref || github.event.workflow_run.head_branch, 'workflows/tests/') }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version-file: '.nvmrc'
+          check-latest: true
+          cache: yarn
+
+      - name: Install dependencies
+        run: yarn install --immutable
+
+      - uses: ./
+        env:
+          DEBUG: 'eslint:cli-engine'
+        with:
+          targets: 'src'
+          fail-check: ${{ github.event_name == 'workflow_call' || (github.event_name == 'push' && github.ref == 'refs/heads/main') }}

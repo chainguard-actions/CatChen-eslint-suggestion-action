@@ -1,0 +1,36 @@
+name: Test errors without fail-check - action succeeds even with lint errors
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Install ESLint 8
+        id: setup
+        run: |
+          set -e
+          ESLINT_DIR="$RUNNER_TEMP/eslint-install"
+          mkdir -p "$ESLINT_DIR"
+          cd "$ESLINT_DIR"
+          npm init -y
+          npm install eslint@8 --no-audit --no-fund
+          echo "eslint-lib-path=$ESLINT_DIR/node_modules/eslint/lib/api.js" >> "$GITHUB_OUTPUT"
+          echo "ESLint installed at $ESLINT_DIR"
+
+      - name: Run ESLint action with errors but fail-check disabled
+        id: action
+        uses: .
+        with:
+          directory: ${{ github.workspace }}
+          targets: tests/fixtures/errors.js
+          eslint-lib-path: ${{ steps.setup.outputs.eslint-lib-path }}
+          config-path: tests/fixtures/.eslintrc.json
+          fail-check: 'false'
+          request-changes: 'false'
+
+      - name: Verify action completed without failing the workflow
+        run: |
+          echo "Action completed without failing the workflow - PASS"
+          echo "PASS: ESLint action ran with errors but did not fail (fail-check=false)"

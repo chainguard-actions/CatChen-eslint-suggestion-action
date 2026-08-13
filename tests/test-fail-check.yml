@@ -1,0 +1,43 @@
+name: Test fail-check - action fails when ESLint errors found and fail-check is true
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Install ESLint 8
+        id: setup
+        run: |
+          set -e
+          ESLINT_DIR="$RUNNER_TEMP/eslint-install"
+          mkdir -p "$ESLINT_DIR"
+          cd "$ESLINT_DIR"
+          npm init -y
+          npm install eslint@8 --no-audit --no-fund
+          echo "eslint-lib-path=$ESLINT_DIR/node_modules/eslint/lib/api.js" >> "$GITHUB_OUTPUT"
+          echo "ESLint installed at $ESLINT_DIR"
+
+      - name: Run ESLint action with errors and fail-check enabled
+        id: action
+        continue-on-error: true
+        uses: .
+        with:
+          directory: ${{ github.workspace }}
+          targets: tests/fixtures/errors.js
+          eslint-lib-path: ${{ steps.setup.outputs.eslint-lib-path }}
+          config-path: tests/fixtures/.eslintrc.json
+          fail-check: 'true'
+          request-changes: 'false'
+
+      - name: Assert action failed as expected
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "action outcome: $OUTCOME"
+          if [ "$OUTCOME" != "failure" ]; then
+            echo "FAIL: expected action to fail with fail-check=true and ESLint errors, but outcome was '$OUTCOME'"
+            exit 1
+          fi
+          echo "PASS: action correctly failed when fail-check=true and ESLint errors were found"
