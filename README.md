@@ -14,6 +14,7 @@ Hardened by [Chainguard](https://www.chainguard.dev) from the upstream action at
 | v4.1.31 | [`v4.1.31`](https://github.com/chainguard-actions/CatChen-eslint-suggestion-action/tree/v4.1.31) | [`e35948b`](https://github.com/CatChen/eslint-suggestion-action/commit/e35948b6ccddf7371e0f11d4569dc3cb67eb7af8) |
 | v4.1.32 | [`v4.1.32`](https://github.com/chainguard-actions/CatChen-eslint-suggestion-action/tree/v4.1.32) | [`e3b7061`](https://github.com/CatChen/eslint-suggestion-action/commit/e3b70610472590e36e3749cc651eb7805d6040f7) |
 | v4.1.33 | [`v4.1.33`](https://github.com/chainguard-actions/CatChen-eslint-suggestion-action/tree/v4.1.33) | [`2b07b89`](https://github.com/CatChen/eslint-suggestion-action/commit/2b07b898c0dd5a016586d22b54282199b79cd358) |
+| v4.1.34 | [`v4.1.34`](https://github.com/chainguard-actions/CatChen-eslint-suggestion-action/tree/v4.1.34) | [`8645117`](https://github.com/CatChen/eslint-suggestion-action/commit/86451179c10930875b0a29067fef90611e75d86d) |
 
 ## Privacy
 
