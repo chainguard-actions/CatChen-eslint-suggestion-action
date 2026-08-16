@@ -1,0 +1,67 @@
+name: Test lint errors without failing check
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up ESLint fixture directory with lint errors
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/tests/fixtures/eslint-errors"
+          cd "$GITHUB_WORKSPACE/tests/fixtures/eslint-errors"
+
+          # Create a minimal package.json
+          cat > package.json << 'EOF'
+          {
+            "name": "eslint-test-fixture-errors",
+            "version": "1.0.0",
+            "private": true
+          }
+          EOF
+
+          # Install ESLint
+          npm install --save-dev eslint@8 2>&1 | tail -5
+
+          # Create a JS file with lint errors (unused variable)
+          cat > bad.js << 'EOF'
+          'use strict';
+
+          var unusedVar = 'this is unused';
+
+          function greet(name) {
+            return 'Hello, ' + name + '!';
+          }
+
+          module.exports = { greet };
+          EOF
+
+          # Create a flat ESLint config
+          cat > eslint.config.js << 'EOF'
+          module.exports = [
+            {
+              files: ['**/*.js'],
+              rules: {
+                'no-unused-vars': 'error',
+              },
+            },
+          ];
+          EOF
+
+          echo "Fixture setup complete"
+          ls -la
+
+      - id: action
+        uses: .
+        with:
+          directory: tests/fixtures/eslint-errors
+          targets: 'bad.js'
+          eslint-lib-path: './node_modules/eslint/lib/api.js'
+          fail-check: 'false'
+          request-changes: 'false'
+
+      - name: Assert action completed without failing workflow
+        run: |
+          echo "Action completed - ESLint ran on code with errors but fail-check=false"
+          echo "PASS: action did not fail the workflow despite lint errors"

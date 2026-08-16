@@ -1,0 +1,75 @@
+name: Test fail-check with lint errors
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up ESLint fixture directory with lint errors
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/tests/fixtures/eslint-fail-check"
+          cd "$GITHUB_WORKSPACE/tests/fixtures/eslint-fail-check"
+
+          # Create a minimal package.json
+          cat > package.json << 'EOF'
+          {
+            "name": "eslint-test-fail-check",
+            "version": "1.0.0",
+            "private": true
+          }
+          EOF
+
+          # Install ESLint
+          npm install --save-dev eslint@8 2>&1 | tail -5
+
+          # Create a JS file with lint errors (unused variable)
+          cat > bad.js << 'EOF'
+          'use strict';
+
+          var unusedVar = 'this is unused';
+
+          function greet(name) {
+            return 'Hello, ' + name + '!';
+          }
+
+          module.exports = { greet };
+          EOF
+
+          # Create a flat ESLint config
+          cat > eslint.config.js << 'EOF'
+          module.exports = [
+            {
+              files: ['**/*.js'],
+              rules: {
+                'no-unused-vars': 'error',
+              },
+            },
+          ];
+          EOF
+
+          echo "Fixture setup complete"
+          ls -la
+
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          directory: tests/fixtures/eslint-fail-check
+          targets: 'bad.js'
+          eslint-lib-path: './node_modules/eslint/lib/api.js'
+          fail-check: 'true'
+          request-changes: 'false'
+
+      - name: Assert action failed due to lint errors with fail-check=true
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          if [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action correctly failed the workflow when fail-check=true and lint errors exist"
+          else
+            echo "FAIL: expected action to fail with fail-check=true and lint errors, but got outcome '$OUTCOME'"
+            exit 1
+          fi
