@@ -1,0 +1,60 @@
+name: Test - Custom ESLint config-path input
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '20'
+
+      - name: Install ESLint and create a clean JS file with a custom config location
+        run: |
+          mkdir -p tests/fixtures/eslint-custom-config
+          cd tests/fixtures/eslint-custom-config
+          npm init -y
+          npm install eslint@8 --save-dev
+          # Create a clean JS file with no ESLint issues
+          cat > clean.js << 'EOF'
+          'use strict';
+          const x = 1;
+          module.exports = x;
+          EOF
+          # Create the custom config at a non-default path
+          mkdir -p custom-configs
+          cat > custom-configs/my-eslint.config.js << 'EOF'
+          module.exports = [
+            {
+              rules: {
+                'no-unused-vars': 'warn',
+              },
+            },
+          ];
+          EOF
+
+      - id: action
+        uses: .
+        with:
+          github-token: ${{ github.token }}
+          directory: tests/fixtures/eslint-custom-config
+          targets: 'clean.js'
+          eslint-lib-path: './node_modules/eslint/lib/api.js'
+          config-path: './custom-configs/my-eslint.config.js'
+          fail-check: false
+          request-changes: false
+
+      - name: Assert action succeeded with custom config-path
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          if [ "$OUTCOME" = "success" ]; then
+            echo "PASS: action succeeded with custom config-path"
+          else
+            echo "FAIL: action should have succeeded with custom config-path, got '$OUTCOME'"
+            exit 1
+          fi

@@ -1,0 +1,60 @@
+name: Test - ESLint errors with fail-check enabled
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '20'
+
+      - name: Install ESLint and create a JS file with lint errors
+        run: |
+          mkdir -p tests/fixtures/eslint-fail-check
+          cd tests/fixtures/eslint-fail-check
+          npm init -y
+          npm install eslint@8 --save-dev
+          # Create a JS file with ESLint errors
+          cat > bad.js << 'EOF'
+          var unused = 'this variable is never used';
+          EOF
+          # Create a flat config that errors on unused vars
+          cat > eslint.config.js << 'EOF'
+          module.exports = [
+            {
+              rules: {
+                'no-unused-vars': 'error',
+              },
+            },
+          ];
+          EOF
+
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          github-token: ${{ github.token }}
+          directory: tests/fixtures/eslint-fail-check
+          targets: 'bad.js'
+          eslint-lib-path: './node_modules/eslint/lib/api.js'
+          fail-check: true
+          request-changes: false
+
+      - name: Assert action failed due to ESLint errors with fail-check enabled
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          if [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed as expected (fail-check=true with ESLint errors)"
+          elif [ "$OUTCOME" = "success" ]; then
+            echo "FAIL: action should have failed with fail-check=true and ESLint errors"
+            exit 1
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi
