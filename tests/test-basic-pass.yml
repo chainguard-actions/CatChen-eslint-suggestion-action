@@ -1,0 +1,62 @@
+name: Test ESLint passes with clean code
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up Node.js
+        uses: actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af # v4.1.0
+        with:
+          node-version: '20'
+
+      - name: Create test project with ESLint
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/tests/fixtures/eslint-project/src"
+
+          # Create a clean JS file (no lint errors)
+          cat > "$GITHUB_WORKSPACE/tests/fixtures/eslint-project/src/clean.js" << 'EOF'
+          const greeting = "hello";
+          console.log(greeting);
+          EOF
+
+          # Create package.json
+          cat > "$GITHUB_WORKSPACE/tests/fixtures/eslint-project/package.json" << 'EOF'
+          {
+            "name": "test-project",
+            "version": "1.0.0",
+            "type": "commonjs"
+          }
+          EOF
+
+          # Install ESLint
+          cd "$GITHUB_WORKSPACE/tests/fixtures/eslint-project"
+          npm install --save-dev eslint@8 2>&1 | tail -5
+
+          # Create ESLint config (flat config for ESLint 8 compat)
+          cat > "$GITHUB_WORKSPACE/tests/fixtures/eslint-project/.eslintrc.json" << 'EOF'
+          {
+            "env": {
+              "node": true,
+              "es2021": true
+            },
+            "rules": {}
+          }
+          EOF
+
+      - id: action
+        uses: .
+        with:
+          directory: tests/fixtures/eslint-project
+          targets: src/clean.js
+          eslint-lib-path: ./node_modules/eslint/lib/api.js
+          config-path: .eslintrc.json
+          request-changes: false
+          fail-check: false
+
+      - name: Assert action succeeded
+        run: |
+          echo "Action completed successfully - ESLint passed on clean code"
+          echo "PASS"

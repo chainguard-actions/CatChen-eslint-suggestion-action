@@ -1,0 +1,65 @@
+name: Test ESLint errors with fail-check false
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up Node.js
+        uses: actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af # v4.1.0
+        with:
+          node-version: '20'
+
+      - name: Create test project with ESLint and a file with lint errors
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/tests/fixtures/eslint-errors-project/src"
+
+          # Create a JS file with lint errors (unused variable)
+          cat > "$GITHUB_WORKSPACE/tests/fixtures/eslint-errors-project/src/dirty.js" << 'EOF'
+          var unusedVar = "this variable is never used";
+          var x = 1
+          EOF
+
+          # Create package.json
+          cat > "$GITHUB_WORKSPACE/tests/fixtures/eslint-errors-project/package.json" << 'EOF'
+          {
+            "name": "test-errors-project",
+            "version": "1.0.0",
+            "type": "commonjs"
+          }
+          EOF
+
+          # Install ESLint
+          cd "$GITHUB_WORKSPACE/tests/fixtures/eslint-errors-project"
+          npm install --save-dev eslint@8 2>&1 | tail -5
+
+          # Create ESLint config with rules that will trigger errors
+          cat > "$GITHUB_WORKSPACE/tests/fixtures/eslint-errors-project/.eslintrc.json" << 'EOF'
+          {
+            "env": {
+              "node": true,
+              "es2021": true
+            },
+            "rules": {
+              "no-unused-vars": "error",
+              "semi": "error"
+            }
+          }
+          EOF
+
+      - id: action
+        uses: .
+        with:
+          directory: tests/fixtures/eslint-errors-project
+          targets: src/dirty.js
+          eslint-lib-path: ./node_modules/eslint/lib/api.js
+          config-path: .eslintrc.json
+          request-changes: false
+          fail-check: false
+
+      - name: Assert action succeeded despite lint errors
+        run: |
+          echo "Action completed - ESLint found errors but fail-check=false so workflow should not fail"
+          echo "PASS"

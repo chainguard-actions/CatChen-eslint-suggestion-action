@@ -1,0 +1,44 @@
+name: Test missing ESLint library fails gracefully
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Create minimal test directory
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/tests/fixtures/no-eslint-project"
+          cat > "$GITHUB_WORKSPACE/tests/fixtures/no-eslint-project/package.json" << 'EOF'
+          {
+            "name": "no-eslint-project",
+            "version": "1.0.0"
+          }
+          EOF
+          echo 'const x = 1;' > "$GITHUB_WORKSPACE/tests/fixtures/no-eslint-project/index.js"
+
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          directory: tests/fixtures/no-eslint-project
+          targets: index.js
+          eslint-lib-path: ./node_modules/eslint/lib/api.js
+          request-changes: false
+          fail-check: false
+
+      - name: Assert action failed gracefully when ESLint is missing
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          if [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action correctly failed when ESLint library was not found"
+          elif [ "$OUTCOME" = "success" ]; then
+            echo "FAIL: expected action to fail when ESLint library is missing"
+            exit 1
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi
