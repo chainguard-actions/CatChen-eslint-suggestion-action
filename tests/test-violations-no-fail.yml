@@ -1,0 +1,53 @@
+name: Test - ESLint violations with fail-check false
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up Node.js and install ESLint with violations
+        run: |
+          node --version
+          npm --version
+          mkdir -p /tmp/eslint-violations-test
+          cd /tmp/eslint-violations-test
+          npm init -y
+          npm install eslint@9 --save-dev
+          # Create a JS file with ESLint violations (unused variable)
+          cat > bad.js << 'EOF'
+          var unusedVar = 42;
+          var anotherUnused = "hello";
+          EOF
+          # Create a minimal flat ESLint config using CommonJS syntax
+          cat > eslint.config.js << 'EOF'
+          module.exports = [
+            {
+              rules: {
+                'no-unused-vars': 'warn',
+              },
+            },
+          ];
+          EOF
+
+      - id: action
+        uses: .
+        with:
+          directory: '/tmp/eslint-violations-test'
+          targets: 'bad.js'
+          eslint-lib-path: './node_modules/eslint/lib/api.js'
+          fail-check: 'false'
+          request-changes: 'false'
+
+      - name: Assert action succeeded despite violations (fail-check is false)
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          if [ "$OUTCOME" = "success" ]; then
+            echo "PASS: action succeeded with violations when fail-check is false"
+          else
+            echo "FAIL: action should succeed when fail-check is false, got '$OUTCOME'"
+            exit 1
+          fi

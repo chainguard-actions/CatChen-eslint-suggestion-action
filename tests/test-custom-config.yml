@@ -1,0 +1,55 @@
+name: Test - Custom ESLint config path
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up Node.js and install ESLint with custom config
+        run: |
+          node --version
+          npm --version
+          mkdir -p /tmp/eslint-custom-config-test
+          cd /tmp/eslint-custom-config-test
+          npm init -y
+          npm install eslint@9 --save-dev
+          # Create a clean JS file to lint
+          cat > sample.js << 'EOF'
+          const x = 1;
+          console.log(x);
+          EOF
+          # Create a custom ESLint config at a non-default path using CommonJS syntax
+          mkdir -p configs
+          cat > configs/custom.eslint.config.js << 'EOF'
+          module.exports = [
+            {
+              rules: {
+                'no-unused-vars': 'warn',
+              },
+            },
+          ];
+          EOF
+
+      - id: action
+        uses: .
+        with:
+          directory: '/tmp/eslint-custom-config-test'
+          targets: 'sample.js'
+          eslint-lib-path: './node_modules/eslint/lib/api.js'
+          config-path: './configs/custom.eslint.config.js'
+          fail-check: 'false'
+          request-changes: 'false'
+
+      - name: Assert action succeeded with custom config
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          if [ "$OUTCOME" = "success" ]; then
+            echo "PASS: action succeeded using custom ESLint config path"
+          else
+            echo "FAIL: action should have succeeded with custom config, got '$OUTCOME'"
+            exit 1
+          fi

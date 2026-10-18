@@ -1,0 +1,79 @@
+import type { ESLint, Rule } from 'eslint';
+import path from 'node:path';
+import { cwd } from 'node:process';
+import {
+  endGroup,
+  error,
+  info,
+  notice,
+  startGroup,
+  warning,
+} from '@actions/core';
+import { formatAnnotationMessage } from './formatLintMessage.js';
+
+export function handleCommit(
+  eventName: string,
+  results: ESLint.LintResult[],
+  ruleMetaDatas: {
+    [name: string]: Rule.RuleMetaData;
+  },
+  failCheck: boolean,
+) {
+  startGroup(`GitHub ${eventName}`);
+  let warningCounter = 0;
+  let errorCounter = 0;
+
+  for (const result of results) {
+    const relativePath = path.relative(cwd(), result.filePath);
+    for (const message of result.messages) {
+      if (message.ruleId === null || result.source === undefined) {
+        continue;
+      }
+      const rule = ruleMetaDatas[message.ruleId];
+      info(`  ${relativePath}:${message.line}`);
+      switch (message.severity) {
+        case 1:
+          warning(
+            formatAnnotationMessage(
+              message.ruleId,
+              message.message,
+              rule?.docs?.url,
+            ),
+            {
+              file: relativePath,
+              startLine: message.line,
+            },
+          );
+          warningCounter++;
+          break;
+        case 2:
+          error(
+            formatAnnotationMessage(
+              message.ruleId,
+              message.message,
+              rule?.docs?.url,
+            ),
+            {
+              file: relativePath,
+              startLine: message.line,
+            },
+          );
+          errorCounter++;
+          break;
+      }
+    }
+  }
+  endGroup();
+
+  startGroup('Feedback');
+  if (warningCounter > 0 || errorCounter > 0) {
+    if (failCheck) {
+      throw new Error('ESLint fails.');
+    } else {
+      error('ESLint fails');
+    }
+  } else {
+    notice('ESLint passes');
+  }
+  endGroup();
+}

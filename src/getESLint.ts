@@ -1,0 +1,53 @@
+import type { ESLint as ProjectESLint, Linter as ProjectLinter } from 'eslint';
+import { existsSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { cwd } from 'node:process';
+import { pathToFileURL } from 'node:url';
+import { notice } from '@actions/core';
+
+export async function getESLint(eslintLibPath: string, configPath: string) {
+  const absoluteDirectory = cwd();
+  const eslintJsPath = resolve(absoluteDirectory, eslintLibPath);
+  if (!existsSync(eslintJsPath)) {
+    throw new Error(`ESLint JavaScript cannot be found at ${eslintJsPath}`);
+  }
+  notice(`Using ESLint from: ${eslintJsPath}`);
+  // Use `new Function` to bypass ncc/webpack static analysis, which would
+  // otherwise replace a dynamic `import()` with a stub that always throws.
+  // eslint-disable-next-line @typescript-eslint/no-implied-eval
+  const dynamicImport = new Function('url', 'return import(url)') as (
+    url: string,
+  ) => Promise<unknown>;
+  const { ESLint, loadESLint } = (await dynamicImport(
+    pathToFileURL(eslintJsPath).href,
+  )) as {
+    ESLint: typeof ProjectESLint;
+    loadESLint: (() => Promise<typeof ProjectESLint>) | undefined;
+  };
+  notice(`ESLint version: ${ESLint.version}`);
+
+  if (configPath) {
+    const absoluteConfigPath = resolve(absoluteDirectory, configPath);
+    notice(`Using ESLint config from: ${absoluteConfigPath}`);
+    const eslint = new ESLint({ overrideConfigFile: absoluteConfigPath });
+    return eslint;
+  }
+
+  if (loadESLint) {
+    // ESLint 8.57.0 and later
+    notice('Using ESLint with default configuration');
+    const eslint = new (await loadESLint())();
+    return eslint;
+  }
+
+  const eslintConfig = (await new ESLint().calculateConfigForFile(
+    'package.json',
+  )) as ProjectLinter.Config | undefined;
+  if (!eslintConfig) {
+    throw new Error(
+      'Failed to find ESLint configuration. Please set the config-path input.',
+    );
+  }
+  const eslint = new ESLint({ baseConfig: eslintConfig });
+  return eslint;
+}
