@@ -1,0 +1,46 @@
+name: Test config-path overrides the default config
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Install ESLint into fixture project
+        working-directory: tests/fixtures/eslint-project
+        run: |
+          npm install --no-save --no-package-lock --no-audit --no-fund eslint@9
+          test -f node_modules/eslint/lib/api.js
+      - id: default-config
+        name: Run with default config (console.js should pass)
+        uses: .
+        continue-on-error: true
+        with:
+          directory: tests/fixtures/eslint-project
+          targets: src/console.js
+          fail-check: 'true'
+      - id: strict-config
+        name: Run with strict config (console.js should fail no-console)
+        uses: .
+        continue-on-error: true
+        with:
+          directory: tests/fixtures/eslint-project
+          targets: src/console.js
+          config-path: strict.config.mjs
+          fail-check: 'true'
+      - name: Assert outcomes
+        env:
+          DEFAULT_OUTCOME: ${{ steps.default-config.outcome }}
+          STRICT_OUTCOME: ${{ steps.strict-config.outcome }}
+        run: |
+          echo "default outcome: $DEFAULT_OUTCOME"
+          echo "strict outcome: $STRICT_OUTCOME"
+          if [ "$DEFAULT_OUTCOME" != "success" ]; then
+            echo "FAIL: expected success with default config"
+            exit 1
+          fi
+          if [ "$STRICT_OUTCOME" != "failure" ]; then
+            echo "FAIL: expected failure with strict config-path"
+            exit 1
+          fi
+          echo "PASS"

@@ -1,0 +1,30 @@
+name: Test clean file passes with fail-check
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Install ESLint into fixture project
+        working-directory: tests/fixtures/eslint-project
+        run: |
+          npm install --no-save --no-package-lock --no-audit --no-fund eslint@9
+          test -f node_modules/eslint/lib/api.js
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          directory: tests/fixtures/eslint-project
+          targets: src/clean.js
+          fail-check: 'true'
+      - name: Assert action succeeded
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          if [ "$OUTCOME" != "success" ]; then
+            echo "FAIL: expected success on clean file"
+            exit 1
+          fi
+          echo "PASS"
