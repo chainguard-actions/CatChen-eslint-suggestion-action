@@ -20,6 +20,7 @@ Hardened by [Chainguard](https://www.chainguard.dev) from the upstream action at
 | v4.1.37 | [`v4.1.37`](https://github.com/chainguard-actions/CatChen-eslint-suggestion-action/tree/v4.1.37) | [`c16f1e4`](https://github.com/CatChen/eslint-suggestion-action/commit/c16f1e40a5cd43506b9c9ea61ba66b0fd0016738) | [`HARDENING.md`](https://github.com/chainguard-actions/CatChen-eslint-suggestion-action/blob/v4.1.37/HARDENING.md) |
 | v4.1.38 | [`v4.1.38`](https://github.com/chainguard-actions/CatChen-eslint-suggestion-action/tree/v4.1.38) | [`7a3743d`](https://github.com/CatChen/eslint-suggestion-action/commit/7a3743d33a65c7b3020a243cc4a6ce67d6819249) | [`HARDENING.md`](https://github.com/chainguard-actions/CatChen-eslint-suggestion-action/blob/v4.1.38/HARDENING.md) |
 | v4.1.39 | [`v4.1.39`](https://github.com/chainguard-actions/CatChen-eslint-suggestion-action/tree/v4.1.39) | [`cfd076d`](https://github.com/CatChen/eslint-suggestion-action/commit/cfd076d9300032d3fd53d312c7909b899c300114) | [`HARDENING.md`](https://github.com/chainguard-actions/CatChen-eslint-suggestion-action/blob/v4.1.39/HARDENING.md) |
+| v4.1.40 | [`v4.1.40`](https://github.com/chainguard-actions/CatChen-eslint-suggestion-action/tree/v4.1.40) | [`30be355`](https://github.com/CatChen/eslint-suggestion-action/commit/30be3558e4cf386d3a1d0a1f888dc97a7fbad8eb) | [`HARDENING.md`](https://github.com/chainguard-actions/CatChen-eslint-suggestion-action/blob/v4.1.40/HARDENING.md) |
 
 ## Privacy
 
